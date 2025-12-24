@@ -55,7 +55,8 @@ def run_skilled_local():
 
     for n_estimators in n_estimators_list:
         for max_depth in max_depth_list:
-            with mlflow.start_run():
+            # nested=True supaya aman dipanggil dari mlflow run
+            with mlflow.start_run(nested=True):
                 print(f"[SKILLED] Run n_estimators={n_estimators}, max_depth={max_depth}")
 
                 mlflow.log_param("n_estimators", n_estimators)
