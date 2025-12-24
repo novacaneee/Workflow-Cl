@@ -44,9 +44,8 @@ def load_data():
 def run_skilled_single_entry():
     X_train, X_test, y_train, y_test = load_data()
 
-    # MLflow lokal
-    mlflow.set_tracking_uri("mlruns")
-    mlflow.set_experiment("Eksperimen_Heart_Failure_IdaBagus_Skilled")
+    # HAPUS mlflow.set_tracking_uri dan set_experiment
+    # Biarkan script menggunakan URI yang disiapkan oleh 'mlflow run' secara otomatis.
 
     n_estimators_list = [50, 100, 200]
     max_depth_list    = [3, 5, None]
@@ -54,53 +53,58 @@ def run_skilled_single_entry():
     best_f1 = -1.0
     best_model = None
 
-    # Satu run "induk" Project, child run manual (mirip pola temanmu)
-    with mlflow.start_run(run_name="project_entry"):
-        for n_estimators in n_estimators_list:
-            for max_depth in max_depth_list:
-                with mlflow.start_run(nested=True):
-                    print(f"[SKILLED] Run n_estimators={n_estimators}, max_depth={max_depth}")
+    # Tidak perlu 'with mlflow.start_run()' lagi untuk parent, 
+    # karena script ini SUDAH berjalan di dalam run yang dibuat oleh 'mlflow run'.
+    # Kita langsung mulai child runs untuk tuning.
 
-                    mlflow.log_param("n_estimators", n_estimators)
-                    mlflow.log_param("max_depth", max_depth)
-                    mlflow.log_param("model_type", "RandomForest_Skilled")
+    print(f"[INFO] Active Run ID from workflow: {mlflow.active_run().info.run_id if mlflow.active_run() else 'None'}")
 
-                    model = RandomForestClassifier(
-                        n_estimators=n_estimators,
-                        max_depth=max_depth,
-                        random_state=42,
-                        class_weight="balanced"
-                    )
-                    model.fit(X_train, y_train)
+    for n_estimators in n_estimators_list:
+        for max_depth in max_depth_list:
+            # Gunakan nested=True agar menjadi anak dari run utama
+            with mlflow.start_run(nested=True):
+                print(f"[SKILLED] Run n_estimators={n_estimators}, max_depth={max_depth}")
 
-                    y_pred = model.predict(X_test)
+                mlflow.log_param("n_estimators", n_estimators)
+                mlflow.log_param("max_depth", max_depth)
+                mlflow.log_param("model_type", "RandomForest_Skilled")
 
-                    acc  = accuracy_score(y_test, y_pred)
-                    f1   = f1_score(y_test, y_pred)
-                    prec = precision_score(y_test, y_pred)
-                    rec  = recall_score(y_test, y_pred)
+                model = RandomForestClassifier(
+                    n_estimators=n_estimators,
+                    max_depth=max_depth,
+                    random_state=42,
+                    class_weight="balanced"
+                )
+                model.fit(X_train, y_train)
 
-                    mlflow.log_metric("accuracy", acc)
-                    mlflow.log_metric("f1_score", f1)
-                    mlflow.log_metric("precision", prec)
-                    mlflow.log_metric("recall", rec)
+                y_pred = model.predict(X_test)
 
-                    # Simpan model sebagai artefak "model" untuk build-docker runs:/.../model
-                    mlflow.sklearn.log_model(model, "model")
+                acc  = accuracy_score(y_test, y_pred)
+                f1   = f1_score(y_test, y_pred)
+                prec = precision_score(y_test, y_pred)
+                rec  = recall_score(y_test, y_pred)
 
-                    print(f"[SKILLED] ACC={acc:.4f}, F1={f1:.4f}, PREC={prec:.4f}, REC={rec:.4f}")
+                mlflow.log_metric("accuracy", acc)
+                mlflow.log_metric("f1_score", f1)
+                mlflow.log_metric("precision", prec)
+                mlflow.log_metric("recall", rec)
 
-                    if f1 > best_f1:
-                        best_f1 = f1
-                        best_model = model
+                # Simpan model sebagai artefak MLflow
+                mlflow.sklearn.log_model(model, "model")
 
-        # Export best model ke folder lokal untuk jaga-jaga
-        if best_model is not None:
-            export_dir = os.path.join(BASE_DIR, "exported_model")
-            if os.path.exists(export_dir):
-                shutil.rmtree(export_dir)
-            mlflow.sklearn.save_model(best_model, export_dir)
-            print(f"[INFO] Best model exported to {export_dir}")
+                print(f"[SKILLED] ACC={acc:.4f}, F1={f1:.4f}, PREC={prec:.4f}, REC={rec:.4f}")
+
+                if f1 > best_f1:
+                    best_f1 = f1
+                    best_model = model
+
+    # Export best model ke folder untuk Docker (sesuai setup workflow kamu saat ini)
+    if best_model is not None:
+        export_dir = os.path.join(BASE_DIR, "exported_model")
+        if os.path.exists(export_dir):
+            shutil.rmtree(export_dir)
+        mlflow.sklearn.save_model(best_model, export_dir)
+        print(f"[INFO] Best model exported to {export_dir}")
 
 if __name__ == "__main__":
     run_skilled_single_entry()
