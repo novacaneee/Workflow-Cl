@@ -15,8 +15,8 @@ from sklearn.metrics import (
 # KONFIGURASI PATH
 # =======================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-TRAIN_PATH = os.path.join(BASE_DIR, "namadataset_preprocessing", "train_data.csv")
-TEST_PATH  = os.path.join(BASE_DIR, "namadataset_preprocessing", "test_data.csv")
+TRAIN_PATH = os.path.join(BASE_DIR, "heart_failure_preprocessing", "train_data.csv")
+TEST_PATH  = os.path.join(BASE_DIR, "heart_failure__preprocessing", "test_data.csv")
 
 def load_data():
     if not os.path.exists(TRAIN_PATH) or not os.path.exists(TEST_PATH):
